@@ -31,5 +31,33 @@ class DirectorySchema:
 # dirs = DirectorySchema()
 # print(dirs.directories[0].blockType)
 
-root = DirectorySchema()
-memoryBlocks[0] = root
+class FileSystem:
+	root = DirectorySchema()
+	memoryBlocks[0] = root
+
+	def create(self, blockType, fileName):
+		if blockType == "D":
+			currentDir = self.root
+			filePaths = fileName.split("/")
+			for filePath in filePaths[1:-1]:
+				for directory in currentDir.directories:
+					if directory.fileName == filePath:
+						currentDir = memoryBlocks[directory.link]
+						break
+			for directory in currentDir.directories:
+				if directory.blockType == "F":
+					directory.blockType = "D"
+					directory.fileName = filePaths[-1]
+					print(filePaths[-1])
+					directory.link = self.root.free
+					memoryBlocks[self.root.free] = DirectorySchema()
+					self.root.free = freeBlockList.pop()
+					break
+
+fileSystem = FileSystem()
+# print(memoryBlocks)
+print(freeBlockList)
+fileSystem.create("D", "root/dir1")
+# print(memoryBlocks[0].directories[0].fileName)
+fileSystem.create("D", "root/dir1/dir2")
+print(memoryBlocks)
