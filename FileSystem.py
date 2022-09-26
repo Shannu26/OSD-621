@@ -7,10 +7,8 @@ class FileSchema:
 	forwardPointer = 0
 	userData = ""
 
-	def __init__(self, backPointer = 0, forwardPointer = 0, userData = ""):
+	def __init__(self, backPointer = 0):
 		self.backPointer = backPointer
-		self.forwardPointer = forwardPointer
-		self.userData = userData
 
 class DirectorySchema:
 
@@ -28,13 +26,10 @@ class DirectorySchema:
 			"size": 0
 		} for _ in range(31)]
 
-# file = FileSchema(100, 200, "hello")
-# dirs = DirectorySchema()
-# print(dirs.directories[0].blockType)
-
 class FileSystem:
 	root = DirectorySchema()
 	memoryBlocks[0] = root
+	openedFile = None
 
 	def create(self, blockType, fileName):
 		currentDir = self.root
@@ -65,12 +60,62 @@ class FileSystem:
 					memoryBlocks[self.root.free] = FileSchema()
 					break
 
+	def open(self, mode, fileName):
+		if self.openedFile:
+			print("Another file is already open. Please close that file to open new file")
+			return
+
+		currentDir = self.root
+		filePaths = fileName.split("/")
+		for filePath in filePaths[1:-1]:
+			for directory in currentDir.directories:
+				if directory["fileName"] == filePath:
+					currentDir = memoryBlocks[directory["link"]]
+					break
+		for directory in currentDir.directories:
+			if directory["blockType"] == "U" and directory["fileName"] == filePaths[-1]:
+				self.openedFile = {
+					"mode": mode,
+					"name": fileName,
+					"link": memoryBlocks[directory["link"]]
+				}
+				break
+
+	def close(self):
+		if self.openedFile:
+			self.openedFile = None
+
+	def write(self, n, data):
+		if len(data) < n:
+			data = data + " " * (n - len(data))
+		else:
+			data = data[:n]
+		self.openedFile["link"].userData = data
+
 fileSystem = FileSystem()
 fileSystem.create("D", "root/dir1")
 fileSystem.create("D", "root/dir1/dir2")
 # print(memoryBlocks[1].directories[0]["fileName"])
 fileSystem.create("D", "root/dir1/dir3")
 fileSystem.create("U", "root/dir1/file1")
-print(memoryBlocks[1].directories)
+# print(memoryBlocks[1].directories)
 # print(memoryBlocks[0].directories)
 print(memoryBlocks)
+print(fileSystem.openedFile)
+fileSystem.open("I", "root/dir1/file1")
+print(fileSystem.openedFile)
+fileSystem.write(5, "1234567890")
+print(memoryBlocks[4].userData)
+fileSystem.close()
+print(fileSystem.openedFile)
+
+
+
+
+
+
+
+
+
+
+
