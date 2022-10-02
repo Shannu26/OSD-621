@@ -18,13 +18,14 @@ class DirectorySchema:
 	filler = 0
 	directories = None
 
-	def __init__(self):
+	def __init__(self, backPointer = 0):
 		self.directories = [{
 			"blockType": "F",
 			"fileName": "",
 			"link": 0,
 			"size": 0
 		} for _ in range(31)]
+		self.backPointer = backPointer
 
 class FileSystem:
 	root = DirectorySchema()
@@ -33,12 +34,22 @@ class FileSystem:
 
 	def create(self, blockType, fileName):
 		currentDir = self.root
+		dirLink = 0
 		filePaths = fileName.split("/")
 		for filePath in filePaths[1:-1]:
+			currentDir = memoryBlocks[self.findDirectory(currentDir, filePath)]
+
+		self.extendIfExtensionRequired(dirLink)
+		isFreeAvailable = False
+
+		while not isFreeAvailable:
 			for directory in currentDir.directories:
-				if directory["fileName"] == filePath:
-					currentDir = memoryBlocks[directory["link"]]
+				if directory["blockType"] == "F":
+					isFreeAvailable = True
 					break
+			if not isFreeAvailable:
+				currentDir = memoryBlocks[currentDir.forwardPointer]
+
 		if blockType == "D":
 			for directory in currentDir.directories:
 				if directory["blockType"] == "F":
@@ -59,6 +70,33 @@ class FileSystem:
 					directory["link"] = self.root.free
 					memoryBlocks[self.root.free] = FileSchema()
 					break
+
+	def findDirectory(self, currentDir, dirName):
+		currDir = currentDir
+
+		while True:
+			for directory in currDir.directories:
+				if directory["blockType"] == "D" and directory["fileName"] == dirName:
+					return directory["link"]
+			currDir = memoryBlocks[currDir.forwardPointer]
+
+	def extendIfExtensionRequired(self, memoryLink):
+		dirLink = memoryLink
+		isAvailable = False
+		while not isAvailable:
+			for directory in memoryBlocks[dirLink].directories:
+				if directory["blockType"] == "F": 
+					isAvailable = True
+					break
+
+			if not isAvailable:
+				if memoryBlocks[dirLink].forwardPointer:
+					dirLink = memoryBlocks[dirLink].forwardPointer
+				else:
+					self.root.free = freeBlockList.pop()
+					memoryBlocks[dirLink].forwardPointer = self.root.free
+					memoryBlocks[self.root.free] = DirectorySchema(dirLink)
+					isAvailable = True
 
 	def delete(self, fileName):
 		currentDir = self.root
@@ -92,10 +130,8 @@ class FileSystem:
 		currentDir = self.root
 		filePaths = fileName.split("/")
 		for filePath in filePaths[1:-1]:
-			for directory in currentDir.directories:
-				if directory["fileName"] == filePath:
-					currentDir = memoryBlocks[directory["link"]]
-					break
+			currentDir = memoryBlocks[self.findDirectory(currentDir, filePath)]
+
 		for directory in currentDir.directories:
 			if directory["blockType"] == "U" and directory["fileName"] == filePaths[-1]:
 				self.openedFile = {
@@ -114,8 +150,8 @@ class FileSystem:
 		fileLink = self.openedFile["link"]
 		howManyFilesRead = 0
 		i = 0
-		while howManyFilesRead * 256 + i < n:
-			if i == 256:
+		while howManyFilesRead * 504 + i < n:
+			if i == 504:
 				if memoryBlocks[fileLink].forwardPointer:
 					fileLink = memoryBlocks[fileLink].forwardPointer
 					howManyFilesRead += 1
@@ -140,7 +176,7 @@ class FileSystem:
 
 		i = 0
 		while i < n:
-			if len(memoryBlocks[fileLink].userData) == 256:
+			if len(memoryBlocks[fileLink].userData) == 504:
 				self.root.free = freeBlockList.pop()
 				memoryBlocks[fileLink].forwardPointer = self.root.free
 				memoryBlocks[self.root.free] = FileSchema(fileLink)
@@ -151,29 +187,60 @@ class FileSystem:
 		# memoryBlocks[self.openedFile["link"]].userData = data
 
 fileSystem = FileSystem()
-fileSystem.create("D", "root/dir1")
-fileSystem.create("D", "root/dir1/dir2")
-# print(memoryBlocks[1].directories[0]["fileName"])
-fileSystem.create("D", "root/dir1/dir3")
-fileSystem.create("U", "root/dir1/file1")
-# print(memoryBlocks[1].directories)
-# print(memoryBlocks[0].directories)
-print(memoryBlocks)
+for i in range(72):
+	fileSystem.create("D", "root/dir" + str(i))
+# print(memoryBlocks)
+print(fileSystem.root.forwardPointer)
+print(memoryBlocks[0].forwardPointer)
+print(memoryBlocks[fileSystem.root.forwardPointer].forwardPointer)
+
+fileSystem.create("U", "root/dir71/file1")
 print(fileSystem.openedFile)
-fileSystem.open("I", "root/dir1/file1")
+fileSystem.open("I", "root/dir71/file1")
 print(fileSystem.openedFile)
-fileSystem.write(600, "1" * 700)
-# print(memoryBlocks[4].userData)
-# print(memoryBlocks[5].userData)
-# print(memoryBlocks[6].userData)
-fileSystem.read(601)
+fileSystem.write(1010, "0" * 1010)
+fileSystem.read(1000)
 fileSystem.close()
-print(fileSystem.openedFile)
 print(memoryBlocks)
 
-fileSystem.delete("root/dir1/file1")
-print(memoryBlocks)
-print(freeBlockList)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# fileSystem.create("D", "root/dir1")
+# fileSystem.create("D", "root/dir1/dir2")
+# # print(memoryBlocks[1].directories[0]["fileName"])
+# fileSystem.create("D", "root/dir1/dir3")
+# fileSystem.create("U", "root/dir1/file1")
+# # print(memoryBlocks[1].directories)
+# # print(memoryBlocks[0].directories)
+# print(memoryBlocks)
+# print(fileSystem.openedFile)
+# fileSystem.open("I", "root/dir1/file1")
+# print(fileSystem.openedFile)
+# fileSystem.write(600, "1" * 700)
+# # print(memoryBlocks[4].userData)
+# # print(memoryBlocks[5].userData)
+# # print(memoryBlocks[6].userData)
+# fileSystem.read(601)
+# fileSystem.close()
+# print(fileSystem.openedFile)
+# print(memoryBlocks)
+
+# fileSystem.delete("root/dir1/file1")
+# print(memoryBlocks)
+# print(freeBlockList)
 
 
 
