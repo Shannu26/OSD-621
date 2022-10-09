@@ -103,17 +103,25 @@ class FileSystem:
 		fileLink = -1
 		filePaths = fileName.split("/")
 		for filePath in filePaths[1:-1]:
+			currentDir = memoryBlocks[self.findDirectory(currentDir, filePath)]
+
+		fileFound = False
+
+		while not fileFound:
 			for directory in currentDir.directories:
-				if directory["fileName"] == filePath:
-					currentDir = memoryBlocks[directory["link"]]
+				if directory["blockType"] == "U" and directory["fileName"] == filePaths[-1]:
+					fileLink = directory["link"]
+					directory["blockType"] = "F"
+					directory["fileName"] = ""
+					directory["link"] = 0
+					fileFound = True
 					break
-		for directory in currentDir.directories:
-			if directory["blockType"] == "U" and directory["fileName"] == filePaths[-1]:
-				fileLink = directory["link"]
-				directory["blockType"] = "F"
-				directory["fileName"] = ""
-				directory["link"] = 0
-				break
+
+			if not fileFound:
+				if currentDir.forwardPointer == 0: 
+					print("File Not Found Error")
+					return
+				currentDir = memoryBlocks[currentDir.forwardPointer]
 
 		while fileLink:
 			freeBlockList.add(fileLink)
@@ -133,7 +141,6 @@ class FileSystem:
 			currentDir = memoryBlocks[self.findDirectory(currentDir, filePath)]
 
 		while not self.openedFile:
-
 			for directory in currentDir.directories:
 				if directory["blockType"] == "U" and directory["fileName"] == filePaths[-1]:
 					self.openedFile = {
@@ -202,13 +209,15 @@ for i in range(72):
 # print(memoryBlocks[fileSystem.root.forwardPointer].forwardPointer)
 
 fileSystem.create("U", "root/file1")
-fileSystem.create("U", "root/dir1/file1")
 print(fileSystem.openedFile)
-fileSystem.open("I", "root/dir1/file1")
+fileSystem.open("I", "root/file1")
 print(fileSystem.openedFile)
-fileSystem.write(30, "0" * 1010)
+fileSystem.write(2000, "0" * 1010)
 fileSystem.read(1000)
 fileSystem.close()
+fileSystem.create("U", "root/dir1/file1")
+print(memoryBlocks)
+fileSystem.delete("root/file1")
 print(memoryBlocks)
 
 
