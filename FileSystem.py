@@ -78,6 +78,7 @@ class FileSystem:
 			for directory in currDir.directories:
 				if directory["blockType"] == "D" and directory["fileName"] == dirName:
 					return directory["link"]
+			if currentDir.forwardPointer == 0: raise Exception(dirName + " not found")
 			currDir = memoryBlocks[currDir.forwardPointer]
 
 	def extendIfExtensionRequired(self, memoryLink):
@@ -119,8 +120,7 @@ class FileSystem:
 
 			if not fileFound:
 				if currentDir.forwardPointer == 0: 
-					print("File Not Found Error")
-					return
+					raise Exception("File Not Found Error")
 				currentDir = memoryBlocks[currentDir.forwardPointer]
 
 		while fileLink:
@@ -131,9 +131,6 @@ class FileSystem:
 			
 
 	def open(self, mode, fileName):
-		if self.openedFile:
-			print("Another file is already open. Please close that file to open new file")
-			return
 
 		currentDir = self.root
 		filePaths = fileName.split("/")
@@ -147,13 +144,11 @@ class FileSystem:
 						"mode": mode,
 						"name": fileName,
 						"link": directory["link"]
-						# "link": memoryBlocks[directory["link"]]
 					}
 					return
 
 			if not currentDir.forwardPointer: 
-				print("File Not Found Error")
-				return
+				raise Exception("File Not Found Error")
 			currentDir = memoryBlocks[currentDir.forwardPointer]
 
 	def close(self):
@@ -189,21 +184,122 @@ class FileSystem:
 			data = data[:n]
 
 		i = 0
+		j = 0
 		while i < n:
 			if len(memoryBlocks[fileLink].userData) == 504:
 				self.root.free = freeBlockList.pop()
 				memoryBlocks[fileLink].forwardPointer = self.root.free
 				memoryBlocks[self.root.free] = FileSchema(fileLink)
 				fileLink = self.root.free
+				j = 0
 				continue
-			memoryBlocks[fileLink].userData += data[i]
+			memoryBlocks[fileLink].userData = memoryBlocks[fileLink].userData[:j] + data[i] + memoryBlocks[fileLink].userData[j + 1:]
 			i += 1
-		# memoryBlocks[self.openedFile["link"]].userData = data
+			j += 1
 
+def restoreOS(fileSystem):
+	commands = []
+	with open("OS_Status.txt", "r") as reader:
+		commands = list(reader.readlines())
+		print(commands)
+		for command in commands:
+			parts = command.split(" ")
+			if parts[0] == "CREATE":
+				fileSystem.create(parts[1], parts[2][:-1])
+			if parts[0] == "DELETE":
+				fileSystem.delete(parts[1][:-1])
+			if parts[0] == "OPEN":
+				fileSystem.open(parts[1][:-1])
+			print(memoryBlocks)
+	return commands
+
+def saveOS(commands):
+	with open("OS_Status.txt", "w") as writer:
+		writer.writelines(commands)
 
 def main():
 	fileSystem = FileSystem()
-	# for i in range(72):
+
+	commands = []
+
+	print("How do you want to Boot your System?")
+	print("1. Launch new system")
+	print("2. Restore from old save")
+	bootOption = int(input("Enter your option: "))
+	if bootOption == 2: commands = restoreOS(fileSystem)
+	if bootOption == 1: commands = []
+	print(commands)
+
+	option = 1
+	while option != 7:
+		try:
+			print("Which Operation do you want to implement?")
+			print("1. Create")
+			print("2. Delete")
+			print("3. Open")
+			print("4. Close")
+			print("5. Read")
+			print("6. Write")
+			print("7. Shutdown")
+			option = int(input("Enter your option: "))
+			command = ""
+			if option == 1:
+				command = "CREATE "
+				print("What do you want to Create?")
+				print("1. Directory")
+				print("2. File")
+				blockType = int(input("Enter your option: "))
+				if blockType == 1:
+					command += "D "
+					fileName = input("Enter directory name: ")
+					command += fileName
+					fileSystem.create("D", fileName)
+				else:
+					command += "U "
+					fileName = input("Enter file name: ")
+					command += fileName
+					fileSystem.create("U", fileName)
+				commands.append(command + "\n")
+			if option == 2:
+				fileName = input("Enter file name to delete: ")
+				command = "DELETE " + fileName
+				commands.append(command + "\n")
+				fileSystem.delete(fileName)
+			if option == 3:
+				fileName = input("Enter file name to open: ")
+				print("How do you want open the file?")
+				print("I. Input Mode")
+				print("O. Output Mode")
+				print("U. Update Mode")
+				mode = input("Enter your option: ")
+				command = "OPEN " + mode + fileName
+				commands.append(command + "\n")
+				fileSystem.open(mode, fileName)
+			if option == 5:
+				n = int(input("Enter number of bytes you want to read: "))
+				fileSystem.read(n)
+			if option == 6:
+				text = input("Enter the data you want to enter: ")
+				n = int(input("Enter number of bytes you want to enter: "))
+				fileSystem.write(n, text)
+			if option == 7:
+				saveOS(commands)
+		except Exception as error:
+			print(error)
+
+		print(memoryBlocks)
+
+
+if __name__ == "__main__":
+	main()
+
+
+
+
+
+
+
+# for i in range(72):
 	# 	fileSystem.create("D", "root/dir" + str(i))
 	# # print(memoryBlocks)
 	# # print(fileSystem.root.forwardPointer)
@@ -221,66 +317,6 @@ def main():
 	# print(memoryBlocks)
 	# fileSystem.delete("root/file1")
 	# print(memoryBlocks)
-
-	commands = []
-
-	print("How do you want to Boot your System?")
-	print("1. Launch new system")
-	print("2. Restore from old save")
-	bootOption = int(input("Enter your option: "))
-	print(bootOption)
-	if bootOption == 1: commands = []
-	else: commands = []
-
-	option = 1
-	while option != 7:
-		print("Which Operation do you want to implement?")
-		print("1. Create")
-		print("2. Delete")
-		print("3. Open")
-		print("4. Close")
-		print("5. Read")
-		print("6. Write")
-		print("7. Shutdown")
-		option = int(input("Enter your option: "))
-
-		if option == 1:
-			print("What do you want to Create?")
-			print("1. Directory")
-			print("2. File")
-			blockType = int(input("Enter your option: "))
-			if blockType == 1:
-				fileName = input("Enter directory name: ")
-				fileSystem.create("D", fileName)
-			else:
-				fileName = input("Enter file name: ")
-				fileSystem.create("U", fileName)
-		if option == 2:
-			fileName = input("Enter file name to delete: ")
-			fileSystem.delete(fileName)
-		if option == 3:
-			fileName = input("Enter file name to open: ")
-			print("How do you want open the file?")
-			print("I. Input Mode")
-			print("O. Output Mode")
-			print("U. Update Mode")
-			mode = input("Enter your option: ")
-			fileSystem.open(mode, fileName)
-
-		print(memoryBlocks)
-
-
-if __name__ == "__main__":
-	main()
-
-
-
-
-
-
-
-
-
 
 # fileSystem.create("D", "root/dir1")
 # fileSystem.create("D", "root/dir1/dir2")

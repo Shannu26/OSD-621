@@ -1,0 +1,4 @@
+CREATE D root/dir1
+CREATE D root/dir1/dir2
+CREATE U root/dir1/dir2/file1
+DELETE root/dir1/dir2/file1
