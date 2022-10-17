@@ -147,7 +147,16 @@ class FileSystem:
 						"name": fileName,
 						"link": directory["link"],
 						"dir": directory,
+						"pointer": 0
 					}
+
+					if mode == "O":
+						fileLink = self.openedFile["link"]
+						while memoryBlocks[fileLink].forwardPointer:
+							print("Hi")
+							fileLink = memoryBlocks[fileLink].forwardPointer
+						self.openedFile["link"] = fileLink
+						self.openedFile["pointer"] = self.openedFile["dir"]["size"]
 					return
 
 			if not currentDir.forwardPointer: 
@@ -161,8 +170,9 @@ class FileSystem:
 	def read(self, n):
 		fileLink = self.openedFile["link"]
 		howManyFilesRead = 0
-		i = 0
-		while howManyFilesRead * 504 + i < n:
+		i = self.openedFile["pointer"]
+		print(len(memoryBlocks[fileLink].userData))
+		while n > 0:
 			if i == 504:
 				if memoryBlocks[fileLink].forwardPointer:
 					fileLink = memoryBlocks[fileLink].forwardPointer
@@ -170,13 +180,16 @@ class FileSystem:
 					i = 0
 				else: 
 					print("EOF")
-					return
+					break
 			else:
 				if i == len(memoryBlocks[fileLink].userData): 
 					print("EOF")
-					return 
+					break
 				print(memoryBlocks[fileLink].userData[i], end="")
 				i += 1
+			n -= 1
+		self.openedFile["link"] = fileLink
+		self.openedFile["pointer"] = i
 		print()
 
 	def write(self, n, data):
@@ -187,7 +200,7 @@ class FileSystem:
 			data = data[:n]
 
 		i = 0
-		j = 0
+		j = self.openedFile["pointer"]
 		while i < n:
 			if j == 504:
 				if memoryBlocks[fileLink].forwardPointer:
@@ -203,6 +216,42 @@ class FileSystem:
 			i += 1
 			j += 1
 		if memoryBlocks[fileLink].forwardPointer == 0: self.openedFile["dir"]["size"] = len(memoryBlocks[fileLink].userData)
+		self.openedFile["link"] = fileLink
+		self.openedFile["pointer"] = j
+		print(self.openedFile)
+
+	def seek(self, base, offset):
+		if base == -1:
+			self.openedFile["link"] = self.openedFile["dir"]["link"]
+			self.openedFile["pointer"] = 0
+		elif base == 1:
+			self.openedFile["pointer"] = self.openedFile["dir"]["size"]
+			fileLink = self.openedFile["dir"]["link"]
+			while memoryBlocks[fileLink].forwardPointer:
+				fileLink = memoryBlocks[fileLink].forwardPointer
+			self.openedFile["link"] = fileLink
+
+		if offset < 0:
+			while offset != 0:
+				if self.openedFile["pointer"] == 0:
+					if memoryBlocks[self.openedFile["link"]].backPointer: 
+						self.openedFile["link"] = memoryBlocks[self.openedFile["link"]].backPointer
+						self.openedFile["pointer"] = 504
+					else: break
+				self.openedFile["pointer"] -= 1
+				offset += 1
+		elif offset > 0:
+			while offset != 0:
+				if self.openedFile["pointer"] == 503:
+					if memoryBlocks[self.openedFile["link"]].forwardPointer: 
+						self.openedFile["link"] = memoryBlocks[self.openedFile["link"]].forwardPointer
+						self.openedFile["pointer"] = -1
+					else: break
+				if memoryBlocks[self.openedFile["link"]].forwardPointer == 0 and self.openedFile["pointer"] == self.openedFile["dir"]["size"]: break
+				self.openedFile["pointer"] += 1
+				offset -= 1
+
+		print(self.openedFile)
 
 def restoreOS(fileSystem):
 	commands = []
@@ -217,10 +266,13 @@ def restoreOS(fileSystem):
 				fileSystem.delete(parts[1][:-1])
 			if parts[0] == "OPEN":
 				fileSystem.open(parts[1], parts[2][:-1])
-			if parts[0] == "CLOSE":
+			if parts[0] == "CLOSE\n":
 				fileSystem.close()
 			if parts[0] == "WRITE":
-				fileSystem.write(int(parts[1]), " ".join(parts[2:-1]) + " " + parts[-1][:-1])
+				parts[-1] = parts[-1][:-1]
+				fileSystem.write(int(parts[1]), " ".join(parts[2:]))
+			if parts[0] == "SEEK":
+				fileSystem.seek(int(parts[1]), int(parts[2][:-1]))
 	print(memoryBlocks)
 	return commands
 
@@ -242,7 +294,7 @@ def main():
 	# print(commands)
 
 	option = 1
-	while option != 7:
+	while option != 8:
 		try:
 			print("Which Operation do you want to implement?")
 			print("1. Create")
@@ -251,7 +303,8 @@ def main():
 			print("4. Close")
 			print("5. Read")
 			print("6. Write")
-			print("7. Shutdown")
+			print("7. Seek")
+			print("8. Shutdown")
 			option = int(input("Enter your option: "))
 			command = ""
 			if option == 1:
@@ -300,6 +353,14 @@ def main():
 				print(command)
 				commands.append(command + "\n")
 			if option == 7:
+				base = int(input("Enter the base: "))
+				offset = int(input("Enter the offset: "))
+				fileSystem.seek(base, offset)
+				command = "SEEK " + str(base) + " " + str(offset)
+				commands.append(command + "\n")
+			if option == 8:
+				fileSystem.close()
+				commands.append("CLOSE\n")
 				saveOS(commands)
 
 		except Exception as error:
@@ -317,16 +378,3 @@ if __name__ == "__main__":
 	# # print(fileSystem.root.forwardPointer)
 	# # print(memoryBlocks[0].forwardPointer)
 	# # print(memoryBlocks[fileSystem.root.forwardPointer].forwardPointer)
-
-	# fileSystem.create("U", "root/file1")
-	# print(fileSystem.openedFile)
-	# fileSystem.open("I", "root/file1")
-	# print(fileSystem.openedFile)
-	# fileSystem.write(2000, "0" * 1010)
-	# fileSystem.read(1000)
-	# fileSystem.close()
-	# fileSystem.create("U", "root/dir1/file1")
-	# print(memoryBlocks)
-	# fileSystem.delete("root/file1")
-	# print(memoryBlocks)
-
