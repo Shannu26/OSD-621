@@ -132,6 +132,7 @@ class FileSystem:
 
 	def open(self, mode, fileName):
 
+		self.openedFile = None
 		currentDir = self.root
 		filePaths = fileName.split("/")
 		for filePath in filePaths[1:-1]:
@@ -140,10 +141,12 @@ class FileSystem:
 		while not self.openedFile:
 			for directory in currentDir.directories:
 				if directory["blockType"] == "U" and directory["fileName"] == filePaths[-1]:
+					print(directory["size"])
 					self.openedFile = {
 						"mode": mode,
 						"name": fileName,
-						"link": directory["link"]
+						"link": directory["link"],
+						"dir": directory,
 					}
 					return
 
@@ -186,16 +189,20 @@ class FileSystem:
 		i = 0
 		j = 0
 		while i < n:
-			if len(memoryBlocks[fileLink].userData) == 504:
-				self.root.free = freeBlockList.pop()
-				memoryBlocks[fileLink].forwardPointer = self.root.free
-				memoryBlocks[self.root.free] = FileSchema(fileLink)
-				fileLink = self.root.free
+			if j == 504:
+				if memoryBlocks[fileLink].forwardPointer:
+					fileLink = memoryBlocks[fileLink].forwardPointer
+				else:
+					self.root.free = freeBlockList.pop()
+					memoryBlocks[fileLink].forwardPointer = self.root.free
+					memoryBlocks[self.root.free] = FileSchema(fileLink)
+					fileLink = self.root.free
 				j = 0
 				continue
 			memoryBlocks[fileLink].userData = memoryBlocks[fileLink].userData[:j] + data[i] + memoryBlocks[fileLink].userData[j + 1:]
 			i += 1
 			j += 1
+		if memoryBlocks[fileLink].forwardPointer == 0: self.openedFile["dir"]["size"] = len(memoryBlocks[fileLink].userData)
 
 def restoreOS(fileSystem):
 	commands = []
@@ -209,8 +216,12 @@ def restoreOS(fileSystem):
 			if parts[0] == "DELETE":
 				fileSystem.delete(parts[1][:-1])
 			if parts[0] == "OPEN":
-				fileSystem.open(parts[1][:-1])
-			print(memoryBlocks)
+				fileSystem.open(parts[1], parts[2][:-1])
+			if parts[0] == "CLOSE":
+				fileSystem.close()
+			if parts[0] == "WRITE":
+				fileSystem.write(int(parts[1]), " ".join(parts[2:-1]) + " " + parts[-1][:-1])
+	print(memoryBlocks)
 	return commands
 
 def saveOS(commands):
@@ -272,9 +283,12 @@ def main():
 				print("O. Output Mode")
 				print("U. Update Mode")
 				mode = input("Enter your option: ")
-				command = "OPEN " + mode + fileName
+				command = "OPEN " + mode + " " + fileName
 				commands.append(command + "\n")
 				fileSystem.open(mode, fileName)
+			if option == 4:
+				fileSystem.close()
+				commands.append("CLOSE\n")
 			if option == 5:
 				n = int(input("Enter number of bytes you want to read: "))
 				fileSystem.read(n)
@@ -282,12 +296,17 @@ def main():
 				text = input("Enter the data you want to enter: ")
 				n = int(input("Enter number of bytes you want to enter: "))
 				fileSystem.write(n, text)
+				command = "WRITE " + str(n) + " " + text
+				print(command)
+				commands.append(command + "\n")
 			if option == 7:
+				print(commands)
 				saveOS(commands)
 		except Exception as error:
 			print(error)
 
 		print(memoryBlocks)
+		print(fileSystem.openedFile)
 
 
 if __name__ == "__main__":
