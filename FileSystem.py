@@ -239,7 +239,7 @@ def main():
 	bootOption = int(input("Enter your option: "))
 	if bootOption == 2: commands = restoreOS(fileSystem)
 	if bootOption == 1: commands = []
-	print(commands)
+	# print(commands)
 
 	option = 1
 	while option != 7:
@@ -300,23 +300,16 @@ def main():
 				print(command)
 				commands.append(command + "\n")
 			if option == 7:
-				print(commands)
 				saveOS(commands)
+
 		except Exception as error:
 			print(error)
 
 		print(memoryBlocks)
 		print(fileSystem.openedFile)
 
-
 if __name__ == "__main__":
 	main()
-
-
-
-
-
-
 
 # for i in range(72):
 	# 	fileSystem.create("D", "root/dir" + str(i))
@@ -336,36 +329,4 @@ if __name__ == "__main__":
 	# print(memoryBlocks)
 	# fileSystem.delete("root/file1")
 	# print(memoryBlocks)
-
-# fileSystem.create("D", "root/dir1")
-# fileSystem.create("D", "root/dir1/dir2")
-# # print(memoryBlocks[1].directories[0]["fileName"])
-# fileSystem.create("D", "root/dir1/dir3")
-# fileSystem.create("U", "root/dir1/file1")
-# # print(memoryBlocks[1].directories)
-# # print(memoryBlocks[0].directories)
-# print(memoryBlocks)
-# print(fileSystem.openedFile)
-# fileSystem.open("I", "root/dir1/file1")
-# print(fileSystem.openedFile)
-# fileSystem.write(600, "1" * 700)
-# # print(memoryBlocks[4].userData)
-# # print(memoryBlocks[5].userData)
-# # print(memoryBlocks[6].userData)
-# fileSystem.read(601)
-# fileSystem.close()
-# print(fileSystem.openedFile)
-# print(memoryBlocks)
-
-# fileSystem.delete("root/dir1/file1")
-# print(memoryBlocks)
-# print(freeBlockList)
-
-
-
-
-
-
-
-
 
