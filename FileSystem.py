@@ -37,7 +37,8 @@ class FileSystem:
 		dirLink = 0
 		filePaths = fileName.split("/")
 		for filePath in filePaths[1:-1]:
-			currentDir = memoryBlocks[self.findDirectory(currentDir, filePath)]
+			dirLink = self.findDirectory(currentDir, filePath)
+			currentDir = memoryBlocks[dirLink]
 
 		self.extendIfExtensionRequired(dirLink)
 		isFreeAvailable = False
