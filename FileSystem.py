@@ -54,7 +54,6 @@ class FileSystem:
 		if blockType == "D":
 			for directory in currentDir.directories:
 				if directory["blockType"] == "F":
-					# print(directory["link"], directory["blockType"], directory["fileName"], directory["size"])
 					directory["blockType"] = "D"
 					directory["fileName"] = filePaths[-1]
 					self.root.free = freeBlockList.pop()
@@ -64,7 +63,6 @@ class FileSystem:
 		if blockType == "U":
 			for directory in currentDir.directories:
 				if directory["blockType"] == "F":
-					# print(directory["link"], directory["blockType"], directory["fileName"], directory["size"])
 					directory["blockType"] = "U"
 					directory["fileName"] = filePaths[-1]
 					self.root.free = freeBlockList.pop()
@@ -116,6 +114,7 @@ class FileSystem:
 					directory["blockType"] = "F"
 					directory["fileName"] = ""
 					directory["link"] = 0
+					directory["size"] = 0
 					fileFound = True
 					break
 
@@ -142,7 +141,6 @@ class FileSystem:
 		while not self.openedFile:
 			for directory in currentDir.directories:
 				if directory["blockType"] == "U" and directory["fileName"] == filePaths[-1]:
-					print(directory["size"])
 					self.openedFile = {
 						"mode": mode,
 						"name": fileName,
@@ -154,7 +152,6 @@ class FileSystem:
 					if mode == "O":
 						fileLink = self.openedFile["link"]
 						while memoryBlocks[fileLink].forwardPointer:
-							print("Hi")
 							fileLink = memoryBlocks[fileLink].forwardPointer
 						self.openedFile["link"] = fileLink
 						self.openedFile["pointer"] = self.openedFile["dir"]["size"]
@@ -169,10 +166,10 @@ class FileSystem:
 			self.openedFile = None
 
 	def read(self, n):
+		if self.openedFile["mode"] == "O": raise Exception("You don't have permission to read from the file")
 		fileLink = self.openedFile["link"]
 		howManyFilesRead = 0
 		i = self.openedFile["pointer"]
-		print(len(memoryBlocks[fileLink].userData))
 		while n > 0:
 			if i == 504:
 				if memoryBlocks[fileLink].forwardPointer:
@@ -194,6 +191,7 @@ class FileSystem:
 		print()
 
 	def write(self, n, data):
+		if self.openedFile["mode"] == "I": raise Exception("You don't have permission to write to the file")
 		fileLink = self.openedFile["link"]
 		if len(data) < n:
 			data = data + " " * (n - len(data))
@@ -219,9 +217,9 @@ class FileSystem:
 		if memoryBlocks[fileLink].forwardPointer == 0: self.openedFile["dir"]["size"] = len(memoryBlocks[fileLink].userData)
 		self.openedFile["link"] = fileLink
 		self.openedFile["pointer"] = j
-		print(self.openedFile)
 
 	def seek(self, base, offset):
+		if self.openedFile["mode"] == "O": raise Exception("You don't have permission to perform seek on the file")
 		if base == -1:
 			self.openedFile["link"] = self.openedFile["dir"]["link"]
 			self.openedFile["pointer"] = 0
@@ -252,29 +250,25 @@ class FileSystem:
 				self.openedFile["pointer"] += 1
 				offset -= 1
 
-		print(self.openedFile)
-
 def restoreOS(fileSystem):
 	commands = []
 	with open("OS_Status.txt", "r") as reader:
 		commands = list(reader.readlines())
-		print(commands)
 		for command in commands:
 			parts = command.split(" ")
+			parts[-1] = parts[-1][:-1]
 			if parts[0] == "CREATE":
-				fileSystem.create(parts[1], parts[2][:-1])
+				fileSystem.create(parts[1], parts[2])
 			if parts[0] == "DELETE":
-				fileSystem.delete(parts[1][:-1])
+				fileSystem.delete(parts[1])
 			if parts[0] == "OPEN":
-				fileSystem.open(parts[1], parts[2][:-1])
-			if parts[0] == "CLOSE\n":
+				fileSystem.open(parts[1], parts[2])
+			if parts[0] == "CLOSE":
 				fileSystem.close()
 			if parts[0] == "WRITE":
-				parts[-1] = parts[-1][:-1]
 				fileSystem.write(int(parts[1]), " ".join(parts[2:]))
 			if parts[0] == "SEEK":
-				fileSystem.seek(int(parts[1]), int(parts[2][:-1]))
-	print(memoryBlocks)
+				fileSystem.seek(int(parts[1]), int(parts[2]))
 	return commands
 
 def saveOS(commands):
@@ -292,7 +286,6 @@ def main():
 	bootOption = int(input("Enter your option: "))
 	if bootOption == 2: commands = restoreOS(fileSystem)
 	if bootOption == 1: commands = []
-	# print(commands)
 
 	option = 1
 	while option != 8:
@@ -367,15 +360,12 @@ def main():
 		except Exception as error:
 			print(error)
 
-		print(memoryBlocks)
-		print(fileSystem.openedFile)
+		# print(memoryBlocks)
+		# print(fileSystem.openedFile)
 
 if __name__ == "__main__":
 	main()
 
 # for i in range(72):
 	# 	fileSystem.create("D", "root/dir" + str(i))
-	# # print(memoryBlocks)
-	# # print(fileSystem.root.forwardPointer)
-	# # print(memoryBlocks[0].forwardPointer)
-	# # print(memoryBlocks[fileSystem.root.forwardPointer].forwardPointer)
+

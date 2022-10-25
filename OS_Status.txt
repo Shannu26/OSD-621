@@ -26,3 +26,9 @@ CLOSE
 OPEN I root/dir1/file1
 CLOSE
 CLOSE
+OPEN O  root/dir1/file1
+CLOSE
+OPEN I root/dir1/file1
+CLOSE
+OPEN I root/dir1/file1
+CLOSE
