@@ -1,34 +1,8 @@
 CREATE D root/dir1
-CREATE D root/dir2
-CREATE D root/dir3
-CREATE D root/dir4
-CREATE D root/dir5
-CREATE D root/dir6
-CREATE U root/file1
-OPEN I root/file1
-CREATE D root/dir1/dir1
-CREATE D root/dir1/dir2
-CREATE D root/dir1/dir3
-CREATE D root/dir1/dir4
-CREATE D root/dir1/dir5
-CREATE D root/dir1/dir6
 CREATE U root/dir1/file1
-OPEN O root/dir1/file1
-WRITE 30 Hello I'm Sasank
-CLOSE
-OPEN I root/dir1/file1
-CLOSE
+CREATE U root/dir1/file2
+CREATE U root/file1
 OPEN O root/file1
-WRITE 10 Hiiiiiii
-CLOSE
-OPEN I root/file1
-CLOSE
-OPEN I root/dir1/file1
-CLOSE
-CLOSE
-OPEN O  root/dir1/file1
-CLOSE
-OPEN I root/dir1/file1
-CLOSE
-OPEN I root/dir1/file1
+WRITE 16 Hello I'm Sasank
+CREATE D root/dir1/dir2
 CLOSE

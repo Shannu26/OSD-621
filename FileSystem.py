@@ -32,6 +32,30 @@ class FileSystem:
 	memoryBlocks[0] = root
 	openedFile = None
 
+	def printOsStructure(self, currentDir = root, depth = 0):
+		spaces = "    " * depth
+		freeCount, directoryCount, fileCount = 0, 0, 0
+
+		while True:
+			for directory in currentDir.directories:
+				if directory["blockType"] == "U":
+					print(spaces + "-" + directory["blockType"] + ":" + directory["fileName"] + ":" + str(directory["size"]))
+					fileCount += 1
+				if directory["blockType"] == "D":
+					print(spaces + "-" + directory["blockType"] + ":" + directory["fileName"])
+					print(spaces + "    " + "|")
+					self.printOsStructure(memoryBlocks[directory["link"]], depth + 1)
+					directoryCount += 1
+				if directory["blockType"] == "F": freeCount += 1
+
+			if currentDir.forwardPointer:
+				currentDir = memoryBlocks[currentDir.forwardPointer]
+			else: break
+
+		print(spaces + "-" + str(freeCount) + " Free Blocks")
+		print(spaces + "-" + str(directoryCount) + " Directory Blocks")
+		print(spaces + "-" + str(fileCount) + " File Blocks")
+
 	def create(self, blockType, fileName):
 		currentDir = self.root
 		dirLink = 0
@@ -278,13 +302,23 @@ def saveOS(commands):
 def main():
 	fileSystem = FileSystem()
 
+	for i in range(31):
+		fileSystem.create("D", "root/dir" + str(i))
+
+	for i in range(31):
+		fileSystem.create("D", "root/dir1/dir" + str(i))
+
 	commands = []
 
 	print("How do you want to Boot your System?")
 	print("1. Launch new system")
 	print("2. Restore from old save")
 	bootOption = int(input("Enter your option: "))
-	if bootOption == 2: commands = restoreOS(fileSystem)
+	if bootOption == 2: 
+		commands = restoreOS(fileSystem)
+		print("root")
+		print("    |")
+		fileSystem.printOsStructure(fileSystem.root, 1)
 	if bootOption == 1: commands = []
 
 	option = 1
@@ -356,6 +390,10 @@ def main():
 				fileSystem.close()
 				commands.append("CLOSE\n")
 				saveOS(commands)
+			else:
+				print("root")
+				print("    |")
+				fileSystem.printOsStructure(fileSystem.root, 1)
 
 		except Exception as error:
 			print(error)
@@ -365,7 +403,4 @@ def main():
 
 if __name__ == "__main__":
 	main()
-
-# for i in range(72):
-	# 	fileSystem.create("D", "root/dir" + str(i))
 
