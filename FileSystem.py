@@ -302,11 +302,11 @@ def saveOS(commands):
 def main():
 	fileSystem = FileSystem()
 
-	for i in range(31):
-		fileSystem.create("D", "root/dir" + str(i))
+	# for i in range(31):
+	# 	fileSystem.create("D", "root/dir" + str(i))
 
-	for i in range(31):
-		fileSystem.create("D", "root/dir1/dir" + str(i))
+	# for i in range(31):
+	# 	fileSystem.create("D", "root/dir1/dir" + str(i))
 
 	commands = []
 
