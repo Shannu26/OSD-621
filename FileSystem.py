@@ -378,7 +378,6 @@ def main():
 				n = int(input("Enter number of bytes you want to enter: "))
 				fileSystem.write(n, text)
 				command = "WRITE " + str(n) + " " + text
-				print(command)
 				commands.append(command + "\n")
 			if option == 7:
 				base = int(input("Enter the base: "))
